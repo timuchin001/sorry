@@ -107,7 +107,7 @@
           var x = rand() * logicalWidth;
           var y = rand() * logicalHeight;
           particles.push({
-            vx: 0, vy: 0, R: 2, speed: rand() + 5, q: ~~(rand() * heartPointsCount),
+            vx: 0, vy: 0, R: 2, speed: rand() + (mobile ? 2 : 5),q: ~~(rand() * heartPointsCount),
             D: 2 * (i % 2) - 1, force: 0.2 * rand() + 0.7,
             f: 'rgba(51, 204, 255, 0.7)',
             trace: Array.from({ length: traceCount }, () => ({ x: rand() * logicalWidth, y: rand() * logicalHeight }))
@@ -132,7 +132,7 @@
     setCanvasSize();
     buildHeartPoints();
 
-    var config = { traceK: 0.4, timeDelta: 0.6 };
+    var config = { traceK: 0.4, timeDelta: mobile ? 0.3 : 0.6 };
     var time = 0;
 
     function drawText() {
@@ -243,4 +243,3 @@
 </script>
 </body>
 </html>
-

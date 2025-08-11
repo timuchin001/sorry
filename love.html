@@ -3,20 +3,43 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Я люблю тебя </title>
+  <title>Heart</title>
   <style>
     html,body { height:100%; margin:0; background:#000; }
     canvas { display:block; width:100%; height:100%; }
+    .telegram-btn {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background-color: #0088cc;
+      color: white;
+      padding: 12px 18px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: bold;
+      font-family: Arial, sans-serif;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      z-index: 10000;
+      user-select: none;
+      transition: background-color 0.3s;
+    }
+    .telegram-btn:hover {
+      background-color: #005f99;
+    }
   </style>
 </head>
 <body>
   <canvas id="heart"></canvas>
-  <!-- опционально: добавь свою музыку или убери элемент -->
-  <!-- <audio id="backgroundMusic" src="music.mp3" loop></audio> -->
+
+  <!-- Кнопка Telegram -->
+  <a href="https://t.me/+gLj2fFb-NlVlZTc6" target="_blank" class="telegram-btn" rel="noopener noreferrer">
+    Перейти в Telegram
+  </a>
+
+  <audio id="backgroundMusic" src="assets/blue.mp3" loop></audio>
 
 <script>
 (function () {
-  // простой polyfill для requestAnimationFrame
   window.requestAnimationFrame = window.requestAnimationFrame ||
                                  window.webkitRequestAnimationFrame ||
                                  window.mozRequestAnimationFrame ||
@@ -42,7 +65,6 @@
     var logicalHeight = window.innerHeight;
     var mobile = isMobileDevice();
 
-    // переменные, которые будут пересчитываться при resize
     var baseHeartSize, pointsOrigin = [], targetPoints = [], particles = [], heartPointsCount = 0;
     var traceCount = mobile ? 20 : 50;
     var dr = mobile ? 0.3 : 0.1;
@@ -55,7 +77,6 @@
       canvas.style.height = logicalHeight + 'px';
       canvas.width = Math.round(logicalWidth * dpr);
       canvas.height = Math.round(logicalHeight * dpr);
-      // масштабируем контекст под DPR
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
 
@@ -71,7 +92,6 @@
     }
 
     function buildHeartPoints() {
-      // подгоняем размер сердца под экран
       baseHeartSize = Math.min(logicalWidth, logicalHeight) * (mobile ? 0.28 : 0.35);
 
       pointsOrigin = [];
@@ -82,7 +102,6 @@
       heartPointsCount = pointsOrigin.length;
       targetPoints = new Array(heartPointsCount);
 
-      // создаём частицы (или заново пересчитываем следы)
       if (!particles.length) {
         for (var i = 0; i < heartPointsCount; i++) {
           var x = rand() * logicalWidth;
@@ -100,7 +119,6 @@
         });
       }
 
-      // очистим фон один раз
       ctx.fillStyle = 'rgba(0,0,0,1)';
       ctx.fillRect(0, 0, logicalWidth, logicalHeight);
     }
@@ -118,13 +136,13 @@
     var time = 0;
 
     function drawText() {
-  var fontSize = Math.max(14, Math.floor(baseHeartSize * 0.18));
-  ctx.font = fontSize + 'px Arial';
-  ctx.fillStyle = 'lightblue';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('I love you ', logicalWidth / 2, logicalHeight / 2.2);
-}
+      var fontSize = Math.max(14, Math.floor(baseHeartSize * 0.22));
+      ctx.font = fontSize + 'px Arial';
+      ctx.fillStyle = 'lightblue';
+      ctx.textAlign = 'center';
+      var y = Math.min(logicalHeight - fontSize, logicalHeight / 2 + baseHeartSize * 0.6);
+      ctx.fillText('I love you Aima', logicalWidth / 2, y);
+    }
 
     function pulse(kx, ky) {
       for (var i = 0; i < pointsOrigin.length; i++) {
@@ -140,19 +158,17 @@
       pulse((1 + n) * 0.5, (1 + n) * 0.5);
       time += (Math.sin(time) < 0 ? 9 : n > 0.8 ? 0.2 : 1) * config.timeDelta;
 
-      // фон с небольшим затемнением для шлейфов
       ctx.fillStyle = 'rgba(0,0,0,0.12)';
       ctx.fillRect(0, 0, logicalWidth, logicalHeight);
 
       for (var i = particles.length - 1; i >= 0; i--) {
         var u = particles[i];
         var q = targetPoints[u.q];
-        // защита: если q ещё не заполнен — пропускаем
         if (!q) continue;
 
         var dx = u.trace[0].x - q[0];
         var dy = u.trace[0].y - q[1];
-        var length = Math.sqrt(dx * dx + dy * dy) || 0.0001; // защита от деления на ноль
+        var length = Math.sqrt(dx * dx + dy * dy) || 0.0001;
 
         if (length < 10) {
           if (rand() > 0.95) {
@@ -188,22 +204,30 @@
 
     loop();
 
-    // музыка (опционально)
+    // ---- МУЗЫКА ----
     (function continueMusic() {
       var music = document.getElementById('backgroundMusic');
       if (!music) return;
+
       var isMusicPlaying = localStorage.getItem('musicPlaying') === 'true';
       var musicCurrentTime = parseFloat(localStorage.getItem('musicCurrentTime') || 0);
+
+      if (musicCurrentTime > 0) {
+        music.currentTime = musicCurrentTime;
+      }
+
       if (isMusicPlaying) {
-        music.currentTime = musicCurrentTime || 0;
         music.play().catch(function (err) { console.log('Music playback failed:', err); });
       }
+
       function onFirstClick() {
         if (music.paused) music.play().catch(function () { /* autoplay blocked */ });
+        localStorage.setItem('musicPlaying', 'true');
         document.removeEventListener('click', onFirstClick);
       }
+
       document.addEventListener('click', onFirstClick);
-      // сохраняем состояние
+
       window.addEventListener('beforeunload', function () {
         localStorage.setItem('musicPlaying', !music.paused);
         localStorage.setItem('musicCurrentTime', music.currentTime || 0);

@@ -4,17 +4,6 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Я люблю тебя </title>
-
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-6BH4ZF90JV"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-
-    gtag('config', 'G-6BH4ZF90JV');
-  </script>
-
   <style>
     html,body { height:100%; margin:0; background:#000; }
     canvas { display:block; width:100%; height:100%; }
@@ -50,16 +39,209 @@
   <audio id="backgroundMusic" src="assets/blue.mp3" loop></audio>
 
 <script>
-  // весь твой скрипт с сердечком и музыкой остаётся без изменений
-  (function () {
-    window.requestAnimationFrame = window.requestAnimationFrame ||
-                                   window.webkitRequestAnimationFrame ||
-                                   window.mozRequestAnimationFrame ||
-                                   function(cb){ return setTimeout(cb, 1000/60); };
+(function () {
+  window.requestAnimationFrame = window.requestAnimationFrame ||
+                                 window.webkitRequestAnimationFrame ||
+                                 window.mozRequestAnimationFrame ||
+                                 function(cb){ return setTimeout(cb, 1000/60); };
 
-    // ... (весь твой код без изменений)
+  function isMobileDevice() {
+    var ua = (navigator.userAgent || navigator.vendor || window.opera || '').toLowerCase();
+    return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/.test(ua);
+  }
 
-  })();
+  var loaded = false;
+
+  function init() {
+    if (loaded) return;
+    loaded = true;
+
+    var canvas = document.getElementById('heart');
+    if (!canvas) { console.error('Canvas with id="heart" not found'); return; }
+    var ctx = canvas.getContext('2d');
+
+    var dpr = Math.max(1, window.devicePixelRatio || 1);
+    var logicalWidth = window.innerWidth;
+    var logicalHeight = window.innerHeight;
+    var mobile = isMobileDevice();
+
+    var baseHeartSize, pointsOrigin = [], targetPoints = [], particles = [], heartPointsCount = 0;
+    var traceCount = mobile ? 20 : 50;
+    var dr = mobile ? 0.3 : 0.1;
+    var rand = Math.random;
+
+    function setCanvasSize() {
+      logicalWidth = window.innerWidth;
+      logicalHeight = window.innerHeight;
+      canvas.style.width = logicalWidth + 'px';
+      canvas.style.height = logicalHeight + 'px';
+      canvas.width = Math.round(logicalWidth * dpr);
+      canvas.height = Math.round(logicalHeight * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    function heartPosition(rad) {
+      return [
+        Math.pow(Math.sin(rad), 3),
+        -(15 * Math.cos(rad) - 5 * Math.cos(2 * rad) - 2 * Math.cos(3 * rad) - Math.cos(4 * rad))
+      ];
+    }
+
+    function scaleAndTranslate(pos, sx, sy, dx, dy) {
+      return [dx + pos[0] * sx, dy + pos[1] * sy];
+    }
+
+    function buildHeartPoints() {
+      baseHeartSize = Math.min(logicalWidth, logicalHeight) * (mobile ? 0.28 : 0.35);
+
+      pointsOrigin = [];
+      for (var i = 0; i < Math.PI * 2; i += dr) pointsOrigin.push(scaleAndTranslate(heartPosition(i), baseHeartSize * 1.1, baseHeartSize * 0.07, 0, 0));
+      for (var i = 0; i < Math.PI * 2; i += dr) pointsOrigin.push(scaleAndTranslate(heartPosition(i), baseHeartSize * 0.9, baseHeartSize * 0.055, 0, 0));
+      for (var i = 0; i < Math.PI * 2; i += dr) pointsOrigin.push(scaleAndTranslate(heartPosition(i), baseHeartSize * 0.7, baseHeartSize * 0.04, 0, 0));
+
+      heartPointsCount = pointsOrigin.length;
+      targetPoints = new Array(heartPointsCount);
+
+      if (!particles.length) {
+        for (var i = 0; i < heartPointsCount; i++) {
+          var x = rand() * logicalWidth;
+          var y = rand() * logicalHeight;
+          particles.push({
+            vx: 0, vy: 0, R: 2, speed: rand() + (mobile ? 2 : 5),q: ~~(rand() * heartPointsCount),
+            D: 2 * (i % 2) - 1, force: 0.2 * rand() + 0.7,
+            f: 'rgba(51, 204, 255, 0.7)',
+            trace: Array.from({ length: traceCount }, () => ({ x: rand() * logicalWidth, y: rand() * logicalHeight }))
+          });
+        }
+      } else {
+        particles.forEach(function(p) {
+          p.trace = Array.from({ length: traceCount }, () => ({ x: rand() * logicalWidth, y: rand() * logicalHeight }));
+        });
+      }
+
+      ctx.fillStyle = 'rgba(0,0,0,1)';
+      ctx.fillRect(0, 0, logicalWidth, logicalHeight);
+    }
+
+    function onResize() {
+      setCanvasSize();
+      buildHeartPoints();
+    }
+
+    window.addEventListener('resize', onResize, { passive: true });
+    setCanvasSize();
+    buildHeartPoints();
+
+    var config = { traceK: 0.4, timeDelta: mobile ? 0.3 : 0.6 };
+    var time = 0;
+
+    function drawText() {
+      var fontSize = Math.max(14, Math.floor(baseHeartSize * 0.22));
+      ctx.font = fontSize + 'px Arial';
+      ctx.fillStyle = 'lightblue';
+      ctx.textAlign = 'center';
+      var y = Math.min(logicalHeight - fontSize, logicalHeight / 2 + baseHeartSize * 0.6);
+      ctx.fillText('I love you Aima', logicalWidth / 2, y);
+    }
+
+    function pulse(kx, ky) {
+      for (var i = 0; i < pointsOrigin.length; i++) {
+        targetPoints[i] = [
+          kx * pointsOrigin[i][0] + logicalWidth / 2,
+          ky * pointsOrigin[i][1] + logicalHeight / 2.2
+        ];
+      }
+    }
+
+    function loop() {
+      var n = -Math.cos(time);
+      pulse((1 + n) * 0.5, (1 + n) * 0.5);
+      time += (Math.sin(time) < 0 ? 9 : n > 0.8 ? 0.2 : 1) * config.timeDelta;
+
+      ctx.fillStyle = 'rgba(0,0,0,0.12)';
+      ctx.fillRect(0, 0, logicalWidth, logicalHeight);
+
+      for (var i = particles.length - 1; i >= 0; i--) {
+        var u = particles[i];
+        var q = targetPoints[u.q];
+        if (!q) continue;
+
+        var dx = u.trace[0].x - q[0];
+        var dy = u.trace[0].y - q[1];
+        var length = Math.sqrt(dx * dx + dy * dy) || 0.0001;
+
+        if (length < 10) {
+          if (rand() > 0.95) {
+            u.q = ~~(rand() * heartPointsCount);
+          } else {
+            if (rand() > 0.99) u.D *= -1;
+            u.q = (u.q + u.D) % heartPointsCount;
+            if (u.q < 0) u.q += heartPointsCount;
+          }
+        }
+
+        u.vx += (-dx / length) * u.speed;
+        u.vy += (-dy / length) * u.speed;
+        u.trace[0].x += u.vx;
+        u.trace[0].y += u.vy;
+        u.vx *= u.force;
+        u.vy *= u.force;
+
+        for (var k = 0; k < u.trace.length - 1; k++) {
+          var T = u.trace[k];
+          var N = u.trace[k + 1];
+          N.x -= config.traceK * (N.x - T.x);
+          N.y -= config.traceK * (N.y - T.y);
+        }
+
+        ctx.fillStyle = u.f;
+        u.trace.forEach(function (t) { ctx.fillRect(t.x, t.y, 1, 1); });
+      }
+
+      drawText();
+      requestAnimationFrame(loop);
+    }
+
+    loop();
+
+    // ---- МУЗЫКА ----
+    (function continueMusic() {
+      var music = document.getElementById('backgroundMusic');
+      if (!music) return;
+
+      var isMusicPlaying = localStorage.getItem('musicPlaying') === 'true';
+      var musicCurrentTime = parseFloat(localStorage.getItem('musicCurrentTime') || 0);
+
+      if (musicCurrentTime > 0) {
+        music.currentTime = musicCurrentTime;
+      }
+
+      if (isMusicPlaying) {
+        music.play().catch(function (err) { console.log('Music playback failed:', err); });
+      }
+
+      function onFirstClick() {
+        if (music.paused) music.play().catch(function () { /* autoplay blocked */ });
+        localStorage.setItem('musicPlaying', 'true');
+        document.removeEventListener('click', onFirstClick);
+      }
+
+      document.addEventListener('click', onFirstClick);
+
+      window.addEventListener('beforeunload', function () {
+        localStorage.setItem('musicPlaying', !music.paused);
+        localStorage.setItem('musicCurrentTime', music.currentTime || 0);
+      });
+    })();
+
+  } // init end
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+
+})();
 </script>
 </body>
 </html>
+
+сюда тоже 
